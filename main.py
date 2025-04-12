@@ -16,6 +16,10 @@ def parse_sec_filing():
         parser = etree.HTMLParser(recover=True)
         tree = etree.fromstring(resp.content, parser=parser)
 
+        namespaces = {
+            'ix': 'http://www.xbrl.org/2013/inlineXBRL'
+        }
+
         extracted = {
             "Filing URL": sec_url,
             "Revenue": "Not found",
@@ -24,9 +28,11 @@ def parse_sec_filing():
             "Net Income": "Not found"
         }
 
-        for elem in tree.xpath("//*[starts-with(name(), 'ix:nonfraction')]"):
-            name = elem.attrib.get("name", "").lower()
-            value = elem.text.strip() if elem.text else ""
+        tags = tree.xpath("//ix:nonFraction", namespaces=namespaces)
+        for tag in tags:
+            name = tag.attrib.get("name", "").lower()
+            value = tag.text.strip() if tag.text else ""
+
             if "revenues" in name and extracted["Revenue"] == "Not found":
                 extracted["Revenue"] = value
             elif "grossprofit" in name and extracted["Gross Profit"] == "Not found":
@@ -39,6 +45,7 @@ def parse_sec_filing():
         return jsonify(extracted)
 
     except Exception as e:
+        print("❌ ERROR:", str(e))
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
